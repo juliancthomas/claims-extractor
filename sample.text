@@ -1,0 +1,7 @@
+Patient records for visit on Oct 12:
+Claim ID is CLM-492019. Provider NPI: 1029384756.
+Primary diagnosis is Type 2 diabetes with kidney complications (E11.22).
+Line items:
+- Office visit (99214), billed at 215.50
+- Blood glucose panel (82947), billed at 45.00
+No fraud markers identified, but check duplicate billing history.
