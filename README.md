@@ -1,16 +1,3 @@
-### GitHub Repository "About" Section
-
-**Description:**
-
-> Robust medical claims extraction CLI using Python 3.12, Pydantic v2, and local LLMs via Ollama. Implements self-healing bounded retry loops that inject validation tracebacks back into context to resolve non-deterministic failures.
-
-**Topics:**
-`python` `pydantic-v2` `ollama` `structured-outputs` `llm-evaluation` `pytest` `cli` `ai-engineering`
-
----
-
-### `README.md`
-
 # Claims Extractor: Self-Healing Structured LLM Extraction
 
 A CLI tool for parsing unstructured clinical notes and medical claim documents into strictly validated JSON records.
