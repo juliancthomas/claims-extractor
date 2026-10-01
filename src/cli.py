@@ -2,6 +2,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 from src.extractor import ClaimsExtractor, ExtractionFailureError
+from src.evaluator import Evaluator  # Adjust function name to match your evaluator.py
 
 app = typer.Typer()
 console = Console()
@@ -23,6 +24,42 @@ def extract(
         for err in exc.errors:
             console.print(f"[yellow]- {err}[/yellow]")
         raise typer.Exit(code=1)
+
+
+@app.command()
+def evaluate(
+    dataset_path: Path = typer.Option(
+        Path("tests/evaluator_test_data"),
+        "--dataset",
+        "-d",
+        help="Path to evaluation dataset or directory",
+        exists=True,
+    ),
+    output_report: Path = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Optional path to save evaluation report (JSON/CSV)",
+    ),
+):
+    """Run extraction accuracy, hallucination, and scoring benchmarks."""
+    console.print(f"[bold green]Running evaluation against:[/bold green] {dataset_path}")
+    
+    try:
+        results = Evaluator()
+        
+        # If your evaluation function returns summary metrics:
+        if results:
+            console.print("[bold cyan]Evaluation Complete:[/bold cyan]")
+            console.print(results)
+            
+        if output_report:
+            console.print(f"[dim]Report saved to {output_report}[/dim]")
+
+    except Exception as exc:
+        console.print(f"[bold red]Evaluation failed:[/bold red] {exc}")
+        raise typer.Exit(code=1)
+
 
 if __name__ == "__main__":
     app()
