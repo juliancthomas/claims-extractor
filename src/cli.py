@@ -1,23 +1,42 @@
+import asyncio
+import json
 from pathlib import Path
+from schemas import ClaimRecord
 import typer
 from rich.console import Console
 from src.extractor import ClaimsExtractor, ExtractionFailureError
-from src.evaluator import Evaluator  # Adjust function name to match your evaluator.py
+from src.evaluator import Evaluator 
+from openai import OpenAI, AsyncOpenAI
 
 app = typer.Typer()
 console = Console()
+
+@app.command()
+def batch_extraction():
+    """Parse a bunch of unstructured medical records into validated JSON."""
+
+    extractor = ClaimsExtractor()
+
+    async def _runner():
+        return await extractor.batch_extraction()
+
+    asyncio.run(_runner())
 
 @app.command()
 def extract(
     file_path: Path = typer.Argument(..., help="Path to raw text document", exists=True),
     max_retries: int = typer.Option(3, help="Max retry cycles")
 ):
-    """Parse unstructured medical records into validated JSON."""
+    """Parse an unstructured medical record into validated JSON."""
     raw_text = file_path.read_text(encoding="utf-8")
     extractor = ClaimsExtractor(max_retries=max_retries)
 
+    async def _runner():
+        schema_json = json.dumps(ClaimRecord.model_json_schema(), indent=2)
+        return await extractor.extract(raw_text, schema_json)
+
     try:
-        record = extractor.extract(raw_text)
+        record = asyncio.run(_runner())
         console.print_json(record.model_dump_json(indent=2))
     except ExtractionFailureError as exc:
         console.print("[bold red]Extraction Aborted:[/bold red]", exc)

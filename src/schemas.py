@@ -19,3 +19,9 @@ class ClaimRecord(BaseModel):
     diagnosis_codes: list[ICD10Code] = Field(..., min_length=1)
     line_items: list[LineItem] = Field(..., min_length=1)
     audit_flags: list[str] = Field(default_factory=list)
+
+class ExtractionResult():
+    record: ClaimRecord
+    latency_ms: float
+    attempts_used: int
+    token_usage: dict

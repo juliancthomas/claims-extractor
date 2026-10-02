@@ -1,8 +1,10 @@
 import os
 import json
-from openai import OpenAI
+from pathlib import Path
+from openai import AsyncOpenAI
 from pydantic import ValidationError
 from src.schemas import ClaimRecord
+import asyncio
 
 SYSTEM_PROMPT = """
 You are a strict data-extraction engine.
@@ -23,7 +25,7 @@ class ExtractionFailureError(RuntimeError):
 class ClaimsExtractor:
     def __init__(
         self,
-        client: OpenAI | None = None,
+        client: AsyncOpenAI | None = None,
         base_url: str | None = None,
         model: str | None = None,
         max_retries: int = 3,
@@ -31,12 +33,11 @@ class ClaimsExtractor:
         resolved_base_url = base_url or os.getenv("OPENAI_BASE_URL", "http://localhost:11434/v1")
         api_key = os.getenv("OPENAI_API_KEY", "ollama")
 
-        self.client = client or OpenAI(base_url=resolved_base_url, api_key=api_key)
+        self.client = client or AsyncOpenAI(base_url=resolved_base_url, api_key=api_key)
         self.model = model or os.getenv("CLAIM_MODEL", "llama3.2")
         self.max_retries = max_retries
 
-    def extract(self, raw_text: str) -> ClaimRecord:
-        schema_json = json.dumps(ClaimRecord.model_json_schema(), indent=2)
+    async def extract(self, raw_text: str, schema_json: str) -> ClaimRecord:
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT.format(schema=schema_json)},
             {"role": "user", "content": f"Extract the following claim:\n\n{raw_text}"}
@@ -46,7 +47,7 @@ class ClaimsExtractor:
 
         for attempt in range(1, self.max_retries + 1):
             try:
-                response = self.client.chat.completions.create(
+                response = await self.client.chat.completions.create(
                     model=self.model,
                     messages=messages,
                     temperature=0.0,
@@ -78,3 +79,28 @@ class ClaimsExtractor:
             f"Extraction failed after {self.max_retries} attempts.",
             errors=validation_errors
         )
+
+    async def batch_extraction(self):
+        schema_json = json.dumps(ClaimRecord.model_json_schema(), indent=2)
+
+        files = self.gather_all_files()
+
+        tasks = []
+        async with asyncio.TaskGroup() as group:
+            for file in files:
+                task = group.create_task(self.extract(file, schema_json))
+                tasks.append(task)
+
+        return [t.result() for t in tasks]
+
+
+
+
+    def gather_all_files(self):
+        base_dir = Path(__file__).resolve().parent
+        raw_claims_dir = base_dir.parent / "tests" / "evaluator_test_data" / "raw_claims"
+        
+        return [
+            file_path.read_text(encoding="utf-8")
+            for file_path in sorted(raw_claims_dir.glob("*.txt"))
+        ]
